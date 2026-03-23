@@ -1,0 +1,13 @@
+cat > backend/.dockerignore << 'EOF'
+node_modules
+npm-debug.log
+.env
+.env.local
+.env.*.local
+.git
+.gitignore
+*.md
+coverage/
+*.test.js
+*.spec.js
+EOF
