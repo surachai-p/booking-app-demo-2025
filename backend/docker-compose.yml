@@ -11,5 +11,19 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  backend:
+    build: .
+    ports:
+      - '3001:3001'
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/booking_app?schema=public
+      - JWT_SECRET=your-secret-key
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
 volumes:
   db_data:
