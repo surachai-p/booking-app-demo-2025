@@ -4,18 +4,114 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const db = require('./database');
+
+// ── 1. Manual .env Loader (Safety Net for local dev) ──
+try {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    const envConfig = fs.readFileSync(envPath, 'utf8');
+    envConfig.split('\n').forEach(line => {
+      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+      if (match) {
+        const key = match[1];
+        let value = (match[2] || '').trim();
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.substring(1, value.length - 1);
+        }
+        if (value.startsWith("'") && value.endsWith("'")) {
+          value = value.substring(1, value.length - 1);
+        }
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    });
+  }
+} catch (e) {
+  // Ignore
+}
+
+// ── 2. Environment Validation ─────────────────
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+requiredEnvVars.forEach(envVar => {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing required env var: ${envVar}`);
+    process.exit(1);
+  }
+});
 
 const app = express();
 const PORT = 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 const REPORT_DIR = path.join(__dirname, 'reports');
 if (!fs.existsSync(REPORT_DIR)) {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
 }
 
-app.use(cors());
-app.use(express.json());
+// ── 2. Security Headers (Helmet) ─────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+}));
+
+// ── 3. CORS Configuration ─────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
+  .split(',');
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin matches allowedOrigins or local development or any vercel.app domain
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      origin.startsWith('http://localhost:') || 
+                      origin.endsWith('.vercel.app');
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: ${origin} not allowed`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// ── 4. Rate Limiting ──────────────────────────
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // หน้าต่างเวลา: 15 นาที
+  max: 100,                  // สูงสุด 100 requests ต่อ IP ต่อ 15 นาที
+  standardHeaders: true,     // ส่ง RateLimit headers กลับไปให้ client
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests. Please try again in 15 minutes.'
+  }
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // หน้าต่างเวลา: 1 ชั่วโมง
+  max: 10,                   // สูงสุด 10 attempts ต่อ IP ต่อชั่วโมง
+  message: {
+    error: 'Too many login attempts. Account temporarily locked for 1 hour.'
+  },
+  skipSuccessfulRequests: true, // ไม่นับ request ที่ login สำเร็จ
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/login', loginLimiter); // เข้มงวดกว่าสำหรับ login
+
+// ── 5. Body Parser ────────────────────────────
+app.use(express.json({ limit: '10kb' }));
 
 const STATUS_VALUES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
@@ -397,3 +493,4 @@ app.get('/api/reports/export', authenticateToken, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Pipeline test Sun, May 17, 2026  2:01:18 PM

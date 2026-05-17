@@ -4,29 +4,17 @@ const { execSync } = require('child_process');
 
 const db = new PrismaClient();
 
-function runMigrations() {
-  try {
-    console.log('Running Prisma migrations...');
-    execSync('npx prisma migrate deploy --schema=prisma/schema.prisma', {
-      cwd: __dirname,
-      stdio: 'inherit'
-    });
-  } catch (error) {
-    console.error('Prisma migration deployment failed:', error);
-    process.exit(1);
-  }
-}
-
 async function initDatabase() {
   try {
-    runMigrations();
     await db.$connect();
     console.log('เชื่อมต่อฐานข้อมูล PostgreSQL สำเร็จ');
 
     const adminPassword = await bcrypt.hash('admin123', 10);
     await db.user.upsert({
       where: { username: 'admin' },
-      update: {},
+      update: {
+        password: adminPassword
+      },
       create: {
         username: 'admin',
         password: adminPassword,

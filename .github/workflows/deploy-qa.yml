@@ -50,10 +50,11 @@ jobs:
       - name: Deploy Frontend to Vercel (QA)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           npm install -g vercel
-          cd frontend
-          vercel --token $VERCEL_TOKEN --yes
+          vercel --token $VERCEL_TOKEN --yes --debug
           # ไม่ใช้ --prod เพื่อให้ deploy เป็น preview URL
 
       - name: Deploy Backend to Render (QA)

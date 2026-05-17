@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env*.local
+.vercel/
+newman/
+reports/
+smoke-test-report.html
+newman-results.xml
+newman-report.html
+*.db
+*.log
