@@ -16,7 +16,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
-          - 5432:5432
+          - 5432:5432 
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -59,3 +59,4 @@ jobs:
       - name: Deploy Backend to Render (QA)
         run: |
           curl -X POST "${{ secrets.RENDER_QA_DEPLOY_HOOK }}"
+ 
