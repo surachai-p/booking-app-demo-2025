@@ -1,0 +1,88 @@
+newman
+
+Booking API Tests
+
+❏ Auth
+↳ Login - Success
+  POST http://localhost:3001/api/login [200 OK, 1.17kB, 97ms]
+  ✓  Status is 200
+  ✓  Returns JWT token
+
+↳ Login - Wrong Password
+  POST http://localhost:3001/api/login [401 Unauthorized, 1.04kB, 58ms]
+  ✓  Status is 401
+
+❏ Rooms
+↳ Get All Rooms
+  GET http://localhost:3001/api/rooms [200 OK, 1.89kB, 2ms]
+  ✓  Status is 200
+  ✓  Returns array
+
+↳ Create Room (Admin)
+  POST http://localhost:3001/api/rooms [400 Bad Request, 967B, 2ms]
+  1. Status is 201
+  2. Room has id
+
+❏ Bookings
+↳ Create Booking (Public)
+  POST http://localhost:3001/api/bookings [400 Bad Request, 735B, 1ms]
+  3. Status is 201
+  4. Booking has id
+
+↳ Get All Bookings (Admin)
+  GET http://localhost:3001/api/bookings [200 OK, 2.48kB, 3ms]
+  ✓  Status is 200
+  ✓  Returns array
+
+❏ Reports
+↳ Get Reports (Admin)
+  GET http://localhost:3001/api/reports [200 OK, 2.67kB, 5ms]
+  ✓  Status is 200
+
+↳ Export Reports - Unauthorized
+  GET http://localhost:3001/api/reports/export [401 Unauthorized, 1kB, 2ms]
+  ✓  Status is 401 without token
+
+┌─────────────────────────┬──────────────────┬──────────────────┐
+│                         │         executed │           failed │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              iterations │                1 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│                requests │                8 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│            test-scripts │                8 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│      prerequest-scripts │                0 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              assertions │               13 │                4 │
+├─────────────────────────┴──────────────────┴──────────────────┤
+│ total run duration: 281ms                                     │
+├───────────────────────────────────────────────────────────────┤
+│ total data received: 4.86kB (approx)                          │
+├───────────────────────────────────────────────────────────────┤
+│ average response time: 21ms [min: 1ms, max: 97ms, s.d.: 33ms] │
+└───────────────────────────────────────────────────────────────┘
+
+  #  failure         detail                                                              
+                                                                                         
+ 1.  AssertionError  Status is 201                                                       
+                     expected response to have status code 201 but got 400               
+                     at assertion:0 in test-script                                       
+                     inside "Rooms / Create Room (Admin)"                                
+                                                                                         
+ 2.  AssertionError  Room has id                                                         
+                     expected { error: 'description is required' } to have property 'id' 
+                     at assertion:1 in test-script                                       
+                     inside "Rooms / Create Room (Admin)"                                
+                                                                                         
+ 3.  AssertionError  Status is 201                                                       
+                     expected response to have status code 201 but got 400               
+                     at assertion:0 in test-script                                       
+                     inside "Bookings / Create Booking (Public)"                         
+                                                                                         
+ 4.  JSONError       Booking has id                                                      
+                     Unexpected token '<' at 1:1                                         
+                     <!DOCTYPE html>                                                     
+                     ^                                                                   
+                     at assertion:1 in test-script                                       
+                     inside "Bookings / Create Booking (Public)"                         

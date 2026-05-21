@@ -2,5 +2,9 @@
   "devDependencies": {
     "newman": "^6.2.2",
     "newman-reporter-htmlextra": "^1.23.1"
+  },
+  "dependencies": {
+    "express-rate-limit": "^8.5.1",
+    "helmet": "^8.1.0"
   }
 }

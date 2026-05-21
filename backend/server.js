@@ -5,6 +5,8 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 const db = require('./database');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = 3001;
@@ -14,8 +16,49 @@ if (!fs.existsSync(REPORT_DIR)) {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
 }
 
-app.use(cors());
+// ใช้ helmet แบบ custom policy หรือ default แค่ครั้งเดียว (แนะนำ custom policy)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  frameguard: { action: 'deny' },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+  }
+}));
+
 app.use(express.json());
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
+  next();
+});
+
+// ✅ ปลอดภัย — กำหนด origin ที่อนุญาตชัดเจน
+const allowedOrigins = [
+  'https://booking.vercel.app',      // Production frontend
+  'https://qa-booking.vercel.app',   // QA frontend
+  'http://localhost:5173',           // Local development
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // อนุญาต requests ที่ไม่มี origin (เช่น curl, Postman)
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin} not allowed`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,    // อนุญาต cookies ใน cross-origin requests
+}));
 
 const STATUS_VALUES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
@@ -75,11 +118,16 @@ const validateBookingData = async (data, isUpdate = false) => {
 
   let room = null;
   if (data.roomId !== undefined && data.roomId !== null) {
-    room = await db.room.findUnique({ where: { id: Number(data.roomId) } });
-    if (!room) {
-      errors.push('ไม่พบห้องพักที่เลือก');
-    } else if (data.guests !== undefined && Number(data.guests) > room.capacity) {
-      errors.push(`จำนวนผู้เข้าพักสูงสุดสำหรับห้องนี้คือ ${room.capacity} ท่าน`);
+    const roomId = Number(data.roomId);
+    if (isNaN(roomId)) {
+      errors.push('roomId ต้องเป็นตัวเลข');
+    } else {
+      room = await db.room.findUnique({ where: { id: roomId } });
+      if (!room) {
+        errors.push('ไม่พบห้องพักที่เลือก');
+      } else if (data.guests !== undefined && Number(data.guests) > room.capacity) {
+        errors.push(`จำนวนผู้เข้าพักสูงสุดสำหรับห้องนี้คือ ${room.capacity} ท่าน`);
+      }
     }
   } else if (!isUpdate) {
     errors.push('กรุณาเลือกห้องพัก');
@@ -147,6 +195,8 @@ app.post('/api/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '1h' }
     );
+
+    console.log(`Generated token for ${username}: ${token.substring(0, 10)}...`);
 
     res.json({
       token,
@@ -396,4 +446,32 @@ app.get('/api/reports/export', authenticateToken, async (req, res) => {
   }
 });
 
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next) => {
+    console.log('Rate limit triggered for', req.originalUrl);
+    res.status(429).json({ error: 'Too many requests. Please try again in 15 minutes.' });
+  }
+});
+
+// Rate limit เข้มข้นสำหรับ Login (ป้องกัน Brute Force)
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // หน้าต่างเวลา: 1 ชั่วโมง
+  max: 10,                   // สูงสุด 10 attempts ต่อ IP ต่อชั่วโมง
+  handler: (req, res, next) => {
+    console.log('Rate limit triggered for', req.originalUrl);
+    res.status(429).json({ error: 'Too many login attempts. Account temporarily locked for 1 hour.' });
+  },
+  skipSuccessfulRequests: true, // ไม่นับ request ที่ login สำเร็จ
+});
+
+app.use('/api', generalLimiter);
+app.use('/api/login', loginLimiter); // เข้มงวดกว่าสำหรับ login
+
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Pipeline test Thu May  7 18:52:24 +07 2026
