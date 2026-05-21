@@ -7,19 +7,35 @@ const db = new PrismaClient();
 function runMigrations() {
   try {
     console.log('Running Prisma migrations...');
-    execSync('npx prisma migrate deploy --schema=prisma/schema.prisma', {
-      cwd: __dirname,
-      stdio: 'inherit'
-    });
+    try {
+      // First try deploy in case migrations are already tracked
+      execSync('npx prisma migrate deploy --schema=prisma/schema.prisma', {
+        cwd: __dirname,
+        stdio: 'inherit'
+      });
+    } catch (error) {
+      // If it fails due to schema drift, resolve all migrations as already applied
+      console.log('Resolving existing migrations...');
+      execSync('npx prisma migrate resolve --applied "*" --schema=prisma/schema.prisma', {
+        cwd: __dirname,
+        stdio: 'inherit'
+      });
+      // Then deploy any pending ones
+      execSync('npx prisma migrate deploy --schema=prisma/schema.prisma', {
+        cwd: __dirname,
+        stdio: 'inherit'
+      });
+    }
   } catch (error) {
-    console.error('Prisma migration deployment failed:', error);
+    console.error('Prisma migration failed:', error);
     process.exit(1);
   }
 }
 
 async function initDatabase() {
   try {
-    runMigrations();
+    // Migrations are already run by docker-entrypoint.sh before this starts
+    // Just connect to database
     await db.$connect();
     console.log('เชื่อมต่อฐานข้อมูล PostgreSQL สำเร็จ');
 
@@ -74,3 +90,6 @@ async function initDatabase() {
 initDatabase();
 
 module.exports = db;
+
+
+
