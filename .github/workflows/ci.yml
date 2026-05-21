@@ -9,7 +9,7 @@ on:
 env:
   NODE_VERSION: '20'
 
-jobs:
+jobs: 
   # ─────────────────────────────────────────────
   # Job 1: Backend CI — Install, Migrate, Test
   # ─────────────────────────────────────────────

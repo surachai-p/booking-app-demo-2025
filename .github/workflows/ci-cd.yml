@@ -8,7 +8,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-
+ 
 jobs:
   # ─────────────────────────────────────────────
   # Job 1: Backend CI — Install, Migrate, Test
@@ -16,7 +16,7 @@ jobs:
   backend-test:
     name: Backend Tests (Newman API)
     runs-on: ubuntu-latest
-
+  
     services:
       postgres:
         image: postgres:16-alpine
@@ -152,9 +152,77 @@ jobs:
         with:
           name: frontend-build
           path: frontend/dist/
+พิ่ม job ใหม่ในไฟล์ .github/workflows/ci-cd.yml ก่อน deploy jobs:
 
   # ─────────────────────────────────────────────
-  # Job 3: Deploy Frontend to Vercel
+  # Job 3: Security Scanning
+  # รันหลังจาก tests ผ่านแล้ว ก่อน deployment
+  # ─────────────────────────────────────────────
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── 1. Dependency Vulnerability Scan ──────
+      - name: Backend — npm audit
+        run: |
+          cd backend
+          npm ci
+          echo "=== Backend Dependency Audit ==="
+          npm audit --audit-level=high
+        # หยุด pipeline ถ้าพบ high/critical vulnerability
+
+      - name: Frontend — npm audit
+        run: |
+          cd frontend
+          npm ci
+          echo "=== Frontend Dependency Audit ==="
+          npm audit --audit-level=high
+
+      # ── 2. Secret Scanning ────────────────────
+      # ตรวจหา hardcoded secrets ที่อาจหลุดใน code
+      - name: Scan for hardcoded secrets (TruffleHog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      # ── 3. OWASP Dependency Check ─────────────
+      # ตรวจสอบ dependencies กับ CVE database
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: depcheck
+        with:
+          project: 'booking-app'
+          path: '.'
+          format: 'HTML'
+          args: >
+            --enableRetired
+            --failOnCVSS 7
+        # failOnCVSS 7 = หยุดถ้าพบ CVSS score ≥ 7.0 (High)
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        if: always()  # upload แม้ว่า job จะ fail
+        with:
+          name: owasp-dependency-report
+          path: ${{ github.workspace }}/reports
+
+      # ── 4. Security Headers Check (post-deploy) ─
+      # จะทำในส่วนที่ 11 หลัง deploy แล้ว
+  # ─────────────────────────────────────────────
+  # Job 4: Deploy Frontend to Vercel
   # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
   # ─────────────────────────────────────────────
   deploy-frontend:
@@ -180,7 +248,7 @@ jobs:
             --yes
 
   # ─────────────────────────────────────────────
-  # Job 4: Deploy Backend to Render
+  # Job 5: Deploy Backend to Render
   # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
   # ─────────────────────────────────────────────
   deploy-backend-render:
@@ -214,4 +282,87 @@ jobs:
           echo "❌ Render health check failed after ${TIMEOUT}s"
           exit 1
 
+# ─────────────────────────────────────────────
+  # Job 6: Post-Deployment Smoke Tests
+  # รันหลัง deploy ทั้งหมดสำเร็จ ทดสอบบน Production จริง
+  # ─────────────────────────────────────────────
+  post-deploy-smoke-test:
+    name: Post-Deploy Smoke Tests (Production)
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend-render]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Newman
+        run: npm install -g newman newman-reporter-htmlextra
+
+      # ── Backend Smoke Tests (Production API) ──
+      - name: Run API Smoke Tests on Production
+        env:
+          PROD_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+        run: |
+          newman run tests/booking-api.postman_collection.json \
+            --env-var "baseUrl=$PROD_BACKEND_URL" \
+            --folder "Auth" \
+            --folder "Rooms" \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export smoke-test-report.html \
+            --bail  # หยุดทันทีเมื่อมี test ล้มเหลว
+
+      # ── Frontend Availability Check ──────────
+      - name: Check Frontend is Reachable
+        run: |
+          echo "Checking frontend URL..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://booking-app-demo-2025-teal.vercel.app")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Frontend is up (HTTP $HTTP_STATUS)"
+          else
+            echo "❌ Frontend returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+      # ── Security Headers Check ───────────────
+      - name: Verify Security Headers on Production
+        env:
+          PROD_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+        run: |
+          echo "=== Checking Security Headers ==="
+          HEADERS=$(curl -sI "$PROD_BACKEND_URL/api/rooms")
+          
+          # ตรวจสอบว่ามี Helmet headers ครบ
+          check_header() {
+            if echo "$HEADERS" | grep -qi "$1"; then
+              echo "✅ $1 found"
+            else
+              echo "⚠️  $1 NOT found — security risk"
+            fi
+          }
+          
+          check_header "x-frame-options"
+          check_header "x-content-type-options"
+          check_header "content-security-policy"
+
+      # ── Upload Test Report ────────────────────
+      - name: Upload Smoke Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-report-${{ github.sha }}
+          path: smoke-test-report.html
+
+      # ── Notify on Failure ─────────────────────
+      - name: Notify on Smoke Test Failure
+        if: failure()
+        run: |
+          echo "🚨 PRODUCTION SMOKE TESTS FAILED!"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Please check the smoke test report artifact"
+          # ในโปรเจกต์จริงควรส่ง notification ไปยัง Slack/Teams/Line
+          # curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+          #   -d '{"text": "🚨 Production smoke tests failed!"}'
