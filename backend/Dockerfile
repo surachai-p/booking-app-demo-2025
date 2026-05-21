@@ -45,3 +45,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Start the application with entrypoint script
 ENTRYPOINT ["./docker-entrypoint.sh"]
 #CMD ["npm", "start"]
+
+COPY docker-entrypoint.sh ./
+
+# บรรทัดนี้สำคัญมากสำหรับคนใช้ Windows เพราะมันจะช่วยลบตัวอักษรส่วนเกิน (^M) ออก
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh
+
+RUN chmod +x ./docker-entrypoint.sh

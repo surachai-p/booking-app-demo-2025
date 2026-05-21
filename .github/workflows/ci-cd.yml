@@ -214,4 +214,87 @@ jobs:
           echo "❌ Render health check failed after ${TIMEOUT}s"
           exit 1
 
+  # ─────────────────────────────────────────────
+  # Job 6: Post-Deployment Smoke Tests
+  # รันหลัง deploy ทั้งหมดสำเร็จ ทดสอบบน Production จริง
+  # ─────────────────────────────────────────────
+  post-deploy-smoke-test:
+    name: Post-Deploy Smoke Tests (Production)
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend-render]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Newman
+        run: npm install -g newman newman-reporter-htmlextra
+
+      # ── Backend Smoke Tests (Production API) ──
+      - name: Run API Smoke Tests on Production
+        env:
+          PROD_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+        run: |
+          newman run tests/booking-api.postman_collection.json \
+            --env-var "baseUrl=$PROD_BACKEND_URL" \
+            --folder "Auth" \
+            --folder "Rooms" \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export smoke-test-report.html \
+            --bail  # หยุดทันทีเมื่อมี test ล้มเหลว
+
+      # ── Frontend Availability Check ──────────
+      - name: Check Frontend is Reachable
+        run: |
+          echo "Checking frontend URL..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.VERCEL_FRONTEND_URL }}")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Frontend is up (HTTP $HTTP_STATUS)"
+          else
+            echo "❌ Frontend returned HTTP $HTTP_STATUS"
+            exit 1
+          fi
+
+      # ── Security Headers Check ───────────────
+      - name: Verify Security Headers on Production
+        env:
+          PROD_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+        run: |
+          echo "=== Checking Security Headers ==="
+          HEADERS=$(curl -sI "$PROD_BACKEND_URL/api/rooms")
+          
+          # ตรวจสอบว่ามี Helmet headers ครบ
+          check_header() {
+            if echo "$HEADERS" | grep -qi "$1"; then
+              echo "✅ $1 found"
+            else
+              echo "⚠️  $1 NOT found — security risk"
+            fi
+          }
+          
+          check_header "x-frame-options"
+          check_header "x-content-type-options"
+          check_header "content-security-policy"
+
+      # ── Upload Test Report ────────────────────
+      - name: Upload Smoke Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-report-${{ github.sha }}
+          path: smoke-test-report.html
+
+      # ── Notify on Failure ─────────────────────
+      - name: Notify on Smoke Test Failure
+        if: failure()
+        run: |
+          echo "🚨 PRODUCTION SMOKE TESTS FAILED!"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Please check the smoke test report artifact"
+          # ในโปรเจกต์จริงควรส่ง notification ไปยัง Slack/Teams/Line
+          # curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+          #   -d '{"text": "🚨 Production smoke tests failed!"}'
