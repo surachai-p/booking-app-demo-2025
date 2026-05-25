@@ -1,3 +1,5 @@
+require('dotenv').config(); 
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { execSync } = require('child_process');
@@ -71,6 +73,4 @@ async function initDatabase() {
   }
 }
 
-initDatabase();
-
-module.exports = db;
+module.exports = { db, initDatabase };

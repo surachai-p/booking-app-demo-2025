@@ -1,21 +1,88 @@
+// 1. เพิ่มโหลดค่า Environment Variables เป็นอย่างแรกสุด!
+require('dotenv').config(); 
+
 const express = require('express');
+const helmet = require('helmet');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
-const db = require('./database');
+const rateLimit = require('express-rate-limit');
+
+// 2. แก้ไขการดึงข้อมูลจาก database ให้ถูกต้องตามที่เรา export ไว้
+const { db, initDatabase } = require('./database');
 
 const app = express();
 const PORT = 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// ใช้ JWT_SECRET ที่มีตัวสำรองเผื่อลืมตั้งค่าไว้
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this';
 const REPORT_DIR = path.join(__dirname, 'reports');
 if (!fs.existsSync(REPORT_DIR)) {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
 }
 
-app.use(cors());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],           
+      scriptSrc: ["'self'"],            
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  frameguard: { action: 'deny' },       
+  hsts: {
+    maxAge: 31536000,                   
+    includeSubDomains: true,
+  }
+}));
+
+const allowedOrigins = [
+  'https://booking.vercel.app',      // Production frontend
+  'https://qa-booking.vercel.app',   // QA frontend
+  'http://localhost:5173',           // Local development
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    
+    const isVercelDomain = origin.endsWith('.vercel.app');
+    
+    if (allowedOrigins.includes(origin) || isVercelDomain) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin} not allowed`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
 app.use(express.json());
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,                  
+  standardHeaders: true,     
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests. Please try again in 15 minutes.'
+  }
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many login attempts. Try again in 1 hour.' },
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/login', loginLimiter);
 
 const STATUS_VALUES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
@@ -124,7 +191,7 @@ const validateRoomData = (data) => {
   return errors;
 };
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -142,10 +209,11 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
     }
 
+    // 3. แก้ไขให้ใช้ค่า JWT_SECRET จากตัวแปรแวดล้อมจริง และผูก Payload เข้ากับข้อมูลผู้ใช้จริง
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '1h' }
+      { id: user.id, username: user.username, role: user.role }, 
+      JWT_SECRET, 
+      { expiresIn: '24h' }
     );
 
     res.json({
@@ -396,4 +464,14 @@ app.get('/api/reports/export', authenticateToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// 4. ครอบฟังก์ชันสำหรับเริ่มต้นฐานข้อมูลก่อนปล่อยให้พอร์ตเชื่อมต่อทำงาน
+async function startServer() {
+  try {
+    await initDatabase(); // สั่งรัน Migration และเตรียมแอดมิน/ห้องเริ่มต้น
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  } catch (err) {
+    console.error("เซิร์ฟเวอร์สตาร์ทไม่สำเร็จ:", err);
+  }
+}
+
+startServer();
