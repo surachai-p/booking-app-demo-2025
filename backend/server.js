@@ -1,7 +1,5 @@
 const express = require('express');
-const helmet = require('helmet');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
@@ -10,73 +8,17 @@ const db = require('./database');
 
 const app = express();
 const PORT = 3001;
-const JWT_SECRET = process.env.JWT_SECRET; // นำ fallback 'your-secret-key' ออกเพื่อให้ล้อไปกับกฎ Fail-Fast ด้านล่าง
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const REPORT_DIR = path.join(__dirname, 'reports');
-
 if (!fs.existsSync(REPORT_DIR)) {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
 }
 
-// ── 1. Environment Validation (Fail-Fast) ─────────────────
-const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
-requiredEnvVars.forEach(envVar => {
-  if (!process.env[envVar]) {
-    console.error(`❌ Missing required env var: ${envVar}`);
-    process.exit(1); 
-  }
-});
-
-// ── 2. Security Headers (Helmet) ─────────────
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-    },
-  },
-}));
-
-// ── 3. CORS Configuration ─────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
-  .split(',');
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: ${origin} not allowed`));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
-// ── 4. Rate Limiting ──────────────────────────
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const loginLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
-  skipSuccessfulRequests: true,
-  message: { error: 'Too many login attempts. Try again in 1 hour.' },
-});
-
-app.use('/api/', generalLimiter);
-app.use('/api/login', loginLimiter);
-
-// ── 5. Body Parser ────────────────────────────
-app.use(express.json({ limit: '10kb' })); // [แก้ไข] นำบรรทัดที่ประกาศทับด้านล่างออกทั้งหมดแล้ว คงไว้เฉพาะตัวที่จำกัดขนาดไว้
+app.use(cors());
+app.use(express.json());
 
 const STATUS_VALUES = ['pending', 'confirmed', 'cancelled', 'completed'];
 
-// ── 6. Middleware ─────────────────────────────
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -99,17 +41,6 @@ const requireAdmin = (req, res, next) => {
     return res.status(403).json({ error: 'ผู้ใช้ไม่มีสิทธิ์เข้าถึง' });
   }
   next();
-};
-
-// ── 7. Helpers & Sanitization ─────────────────
-// ฟังก์ชันช่วยเคลียร์อักขระพิเศษเพื่อป้องกันการโจมตีแบบ CSV Injection
-const sanitizeForCsv = (val) => {
-  if (val === null || val === undefined) return '';
-  let str = String(val);
-  if (str.startsWith('=') || str.startsWith('+') || str.startsWith('-') || str.startsWith('@')) {
-    str = `'${str}`; // เติม single quote ด้านหน้าเพื่อยกเลิกสถานะสูตรคำนวณใน Excel
-  }
-  return `"${str.replace(/"/g, '""')}"`;
 };
 
 const validateBookingData = async (data, isUpdate = false) => {
@@ -193,7 +124,6 @@ const validateRoomData = (data) => {
   return errors;
 };
 
-// ── 8. Routes ─────────────────────────────────
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -439,9 +369,8 @@ app.get('/api/reports/export', authenticateToken, async (req, res) => {
       roomPrice: booking.room?.price || ''
     }));
 
-    // [แก้ไข] ควบคุมการสร้างชื่อไฟล์ไม่ให้มีช่องโหว่ Path Traversal โดยใช้แค่วันเวลาและนามสกุลที่ฟิกซ์ไว้
     const fileName = `report-${Date.now()}.${format}`;
-    const filePath = path.join(REPORT_DIR, path.basename(fileName)); 
+    const filePath = path.join(REPORT_DIR, fileName);
 
     if (format === 'json') {
       const content = JSON.stringify(reportData, null, 2);
@@ -451,24 +380,10 @@ app.get('/api/reports/export', authenticateToken, async (req, res) => {
       res.send(content);
     } else {
       const header = 'id,fullname,email,phone,room,roomType,guests,status,checkin,checkout,comment,createdAt,roomPrice';
-      
-      // [แก้ไข] นำเข้าฟังก์ชัน sanitizeForCsv เพื่อปกป้องไฟล์จากการโจมตีประเภท CSV Injection
       const rows = reportData.map((row) =>
-        [
-          row.id, 
-          sanitizeForCsv(row.fullname), 
-          sanitizeForCsv(row.email), 
-          sanitizeForCsv(row.phone), 
-          sanitizeForCsv(row.room), 
-          sanitizeForCsv(row.roomType), 
-          row.guests, 
-          row.status,
-          row.checkin, 
-          row.checkout, 
-          sanitizeForCsv(row.comment), 
-          row.createdAt, 
-          row.roomPrice
-        ].join(',')
+        [row.id, row.fullname, row.email, row.phone, row.room, row.roomType, row.guests, row.status,
+          row.checkin, row.checkout, `"${String(row.comment).replace(/"/g, '""')}"`, row.createdAt, row.roomPrice]
+          .join(',')
       );
       const content = [header, ...rows].join('\n');
       fs.writeFileSync(filePath, content, 'utf-8');
