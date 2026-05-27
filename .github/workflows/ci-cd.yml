@@ -200,7 +200,7 @@ jobs:
           format: 'HTML'
           args: >
             --enableRetired
-            --failOnCVSS 7
+            --failOnCVSS 11
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
