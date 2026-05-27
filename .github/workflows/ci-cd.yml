@@ -152,6 +152,31 @@ jobs:
         with:
           name: frontend-build
           path: frontend/dist/
+  # ─────────────────────────────────────────────
+  # Job 3: Deploy Frontend to Vercel
+  # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
+  # ─────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend → Vercel
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel (Production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          cd frontend
+          vercel --prod \
+            --token $VERCEL_TOKEN \
+            --yes
 # ─────────────────────────────────────────────
   # Job 3: Security Scanning
   # รันหลังจาก tests ผ่านแล้ว ก่อน deployment
@@ -216,32 +241,6 @@ jobs:
         with:
           name: owasp-dependency-report
           path: ${{ github.workspace }}/reports
-  # ─────────────────────────────────────────────
-  # Job 3: Deploy Frontend to Vercel
-  # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
-  # ─────────────────────────────────────────────
-  deploy-frontend:
-    name: Deploy Frontend → Vercel
-    runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel
-
-      - name: Deploy to Vercel (Production)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          cd frontend
-          vercel --prod \
-            --token $VERCEL_TOKEN \
-            --yes
-
   # ─────────────────────────────────────────────
   # Job 4: Deploy Backend to Render
   # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
