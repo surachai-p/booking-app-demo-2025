@@ -1,5 +1,4 @@
 const express = require('express');
-const helmet = require('helmet');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -14,8 +13,6 @@ const REPORT_DIR = path.join(__dirname, 'reports');
 if (!fs.existsSync(REPORT_DIR)) {
   fs.mkdirSync(REPORT_DIR, { recursive: true });
 }
-
-app.use(helmet()); // เปิดใช้ทุก headers ในชุดมาตรฐาน
 
 
 app.use(cors());
