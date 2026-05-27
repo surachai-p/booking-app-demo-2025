@@ -9,7 +9,7 @@ const path = require('path');
 const db = require('./database');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET; // นำ fallback 'your-secret-key' ออกเพื่อให้ล้อไปกับกฎ Fail-Fast ด้านล่าง
 const REPORT_DIR = path.join(__dirname, 'reports');
 
@@ -28,6 +28,13 @@ requiredEnvVars.forEach(envVar => {
 
 // ── 2. Security Headers (Helmet) ─────────────
 app.use(helmet({
+  dnsPrefetchControl: { allow: false },
+  frameguard: { action: 'sameorigin' },
+  hsts: { maxAge: 15552000, includeSubDomains: true },
+  ieNoOpen: true,
+  noSniff: true,
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+  referrerPolicy: { policy: 'no-referrer' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -35,6 +42,8 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
     },
   },
+  crossOriginEmbedderPolicy: false,
+  originAgentCluster: false,
 }));
 
 // ── 3. CORS Configuration ─────────────────────
