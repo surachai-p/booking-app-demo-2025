@@ -216,9 +216,6 @@ jobs:
         with:
           name: owasp-dependency-report
           path: ${{ github.workspace }}/reports
-
-      # ── 4. Security Headers Check (post-deploy) ─
-      # จะทำในส่วนที่ 11 หลัง deploy แล้ว
   # ─────────────────────────────────────────────
   # Job 3: Deploy Frontend to Vercel
   # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
