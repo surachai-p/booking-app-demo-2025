@@ -1,5 +1,9 @@
 # booking-app-demo-2025
 
+*** จัดทำโดย *** นางสาววณิชชา จับปรั่ง รหัสนักศึกษา68030251
+*** frontend *** https://booking-app-demo-2025-ten.vercel.app/
+*** backend *** https://booking-backend-z9j2.onrender.com
+
 ## Features
 
 This is a comprehensive hotel booking management system with separate frontend and backend applications.
