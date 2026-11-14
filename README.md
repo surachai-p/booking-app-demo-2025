@@ -1,5 +1,8 @@
 # booking-app-demo-2025
 
+**ทำโดย**: 68030049 Chaonai Iamsumang
+**Frontend URL**: https://booking-app-demo-2025-i11plg0wn-chaonaiisas-projects.vercel.app/
+**Backend URL**: https://booking-app-demo-2025-s0sa.onrender.com/
 ## Features
 
 This is a comprehensive hotel booking management system with separate frontend and backend applications.

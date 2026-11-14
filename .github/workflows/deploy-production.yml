@@ -1,0 +1,23 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Frontend to Vercel
+        run: |
+          npm install -g vercel
+          cd frontend
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope ${{ secrets.VERCEL_SCOPE }}
+
+      - name: Deploy Backend
+        run: |
+          # Digital Ocean deployment
+          curl -X POST ${{ secrets.DO_DEPLOY_WEBHOOK }}

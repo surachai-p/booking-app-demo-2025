@@ -7,7 +7,7 @@ const path = require('path');
 const db = require('./database');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const REPORT_DIR = path.join(__dirname, 'reports');
 if (!fs.existsSync(REPORT_DIR)) {
@@ -16,6 +16,21 @@ if (!fs.existsSync(REPORT_DIR)) {
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.json({
+    name: 'booking-app-demo-2025 API',
+    status: 'running',
+    message: 'Backend API is running successfully',
+    endpoints: [
+      '/api/login',
+      '/api/rooms',
+      '/api/bookings',
+      '/api/reports',
+      '/api/reports/export'
+    ]
+  });
+});
 
 const STATUS_VALUES = ['pending', 'confirmed', 'cancelled', 'completed'];
 

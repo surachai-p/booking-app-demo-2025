@@ -1,0 +1,24 @@
+name: Deploy to QA
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Frontend to Vercel
+        run: |
+          # Vercel CLI deployment for QA
+          npm install -g vercel
+          cd frontend
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --scope ${{ secrets.VERCEL_SCOPE }}
+
+      - name: Deploy Backend to Render
+        run: |
+          # Trigger Render deployment via webhook or API
+          curl -X POST ${{ secrets.RENDER_DEPLOY_WEBHOOK }}
