@@ -1,0 +1,433 @@
+# 🏨 Booking App Demo 2025
+### Hotel Booking Management System
+
+ระบบบริหารจัดการการจองห้องพักโรงแรม พัฒนาเป็น Full-Stack Web Application ประกอบด้วย Frontend, Backend API และฐานข้อมูล PostgreSQL พร้อมระบบทดสอบ API และ CI/CD ผ่าน GitHub Actions
+
+---
+
+## 🌐 1. Live Deployment
+
+โปรเจกต์ได้รับการ Deploy ขึ้นระบบ Cloud สำหรับการใช้งานผ่านเว็บไซต์
+
+| Service | Platform | URL |
+|---|---|---|
+| Source Code | GitHub | [GitHub Repository](https://github.com/SorrawichSomton/booking-app-demo-2025) |
+| Production Frontend | Vercel | [Booking Website](https://booking-app-demo-2025-8b9pxrbjt-sorrawichsomton.vercel.app) |
+| Production Backend | Render | [Backend Service](https://booking-app-demo-2025-a8jr.onrender.com) |
+| Backend API Test | Render | [GET /api/rooms](https://booking-app-demo-2025-a8jr.onrender.com/api/rooms) |
+
+### Deployment Status
+
+- ✅ Frontend deployed successfully on Vercel
+- ✅ Backend deployed successfully on Render
+- ✅ PostgreSQL database connected successfully
+- ✅ Backend API returned room data
+- ✅ GitHub Actions CI tests passed
+- ✅ Newman API Tests: 13/13 assertions passed
+
+---
+
+## 📖 2. Project Overview
+
+Booking App Demo 2025 เป็นระบบจองห้องพักโรงแรมที่ออกแบบมาเพื่อรองรับการทำงานของผู้ใช้งานทั่วไปและผู้ดูแลระบบ
+
+**วัตถุประสงค์ของโครงการ**
+
+1. พัฒนาระบบจองห้องพักผ่านเว็บไซต์
+2. จัดการข้อมูลการจองและประเภทห้องพัก
+3. เชื่อมต่อ Frontend กับ Backend ผ่าน REST API
+4. จัดเก็บข้อมูลโดยใช้ PostgreSQL และ Prisma ORM
+5. ทดสอบ API ด้วย Postman Collection และ Newman
+6. สร้าง CI/CD Pipeline ด้วย GitHub Actions
+7. Deploy ระบบขึ้น Cloud เพื่อให้เข้าถึงได้ผ่านอินเทอร์เน็ต
+
+---
+
+## ✨ 3. Main Features
+
+### 3.1 Customer Features
+
+- ดูหน้าเว็บไซต์ระบบจองห้องพัก
+- กรอกชื่อ-นามสกุล อีเมล และเบอร์โทรศัพท์
+- เลือกวันที่ Check-in และ Check-out
+- เลือกประเภทห้องพัก
+- ระบุจำนวนผู้เข้าพัก
+- เพิ่มหมายเหตุในการจอง
+- ส่งคำขอจองห้องพักผ่านระบบ
+
+### 3.2 Administrator Features
+
+**Admin Dashboard**
+- แสดงจำนวนการจองทั้งหมด
+- แสดงจำนวนการจองรอดำเนินการ
+- แสดงจำนวนการจองที่ยืนยันแล้ว
+
+**Booking Management**
+- แสดงรายการจองห้องพัก
+- เพิ่มและแก้ไขข้อมูลการจอง
+- เปลี่ยนสถานะการจอง
+- ลบรายการจอง
+
+**Room Management**
+- เพิ่มประเภทห้องพัก
+- แก้ไขรายละเอียดห้องพัก
+- กำหนดจำนวนผู้เข้าพักสูงสุด
+- กำหนดราคาห้องพัก
+- ลบประเภทห้องพัก
+
+**Reports & Analytics**
+- แสดงจำนวนการจองทั้งหมด
+- สรุปจำนวนคืนที่เข้าพัก
+- แสดงสถิติแยกตามสถานะการจอง
+- สรุปยอดการจองตามประเภทห้อง
+- ส่งออกรายงาน CSV และ JSON
+
+---
+
+## 🛏️ 4. Room Types
+
+ประเภทห้องพักตัวอย่างที่มีอยู่ในระบบ
+
+| Room Type | Capacity | Price / Night |
+|---|---:|---:|
+| Standard | 2 guests | 1,200 THB |
+| Deluxe | 3 guests | 1,800 THB |
+| Suite | 4 guests | 2,500 THB |
+
+ข้อมูลประเภทห้องพักดึงจาก Backend API ที่เชื่อมต่อ PostgreSQL
+
+---
+
+## 🛠️ 5. Technology Stack
+
+| Component | Technology |
+|---|---|
+| Frontend | React, Vite |
+| UI Styling | Tailwind CSS |
+| Backend | Node.js, Express.js |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| Authentication | JWT, bcryptjs |
+| API Testing | Postman, Newman |
+| UI Testing Support | Robot Framework |
+| Containerization | Docker, Docker Compose |
+| CI/CD | GitHub Actions |
+| Frontend Hosting | Vercel |
+| Backend Hosting | Render |
+| Database Hosting | Render PostgreSQL |
+| Version Control | Git, GitHub |
+
+---
+
+## 🏗️ 6. System Architecture
+
+ระบบแบ่งออกเป็น 3 ส่วนหลัก
+
+**Frontend — Vercel**
+
+React Application สำหรับแสดงหน้าเว็บไซต์และรับข้อมูลจากผู้ใช้งาน
+
+↓
+
+**Backend — Render**
+
+Node.js และ Express REST API สำหรับประมวลผลคำขอ ตรวจสอบสิทธิ์ และจัดการข้อมูล
+
+↓
+
+**Database — Render PostgreSQL**
+
+จัดเก็บข้อมูลผู้ใช้งาน รายการจอง และประเภทห้องพัก ผ่าน Prisma ORM
+
+### Database Models
+
+- `User` — ข้อมูลผู้ใช้งานและสิทธิ์
+- `Booking` — ข้อมูลการจองห้องพัก
+- `Room` — ข้อมูลประเภทห้องพัก ราคา และความจุ
+
+---
+
+## 📁 7. Project Structure
+
+โครงสร้างส่วนสำคัญของ Repository
+
+- `.github/workflows/` — GitHub Actions CI/CD workflows
+- `backend/` — Express Backend และ REST API
+- `backend/prisma/` — Prisma Schema และ Database Migrations
+- `backend/Dockerfile` — Backend Docker Image
+- `backend/docker-entrypoint.sh` — Backend Startup Script
+- `frontend/` — React Frontend Application
+- `frontend/src/` — Frontend Source Code
+- `frontend/Dockerfile` — Frontend Docker Image
+- `frontend/nginx.conf` — Nginx Configuration
+- `tests/` — API Test Collection
+- `reports/` — รายงานผลการทดสอบ
+- `docker-compose.yml` — Docker Compose Configuration
+- `README.md` — Project Documentation
+
+---
+
+## 🔌 8. REST API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/login` | Admin Login |
+| GET | `/api/rooms` | Get Room Types |
+| POST | `/api/rooms` | Create Room |
+| PUT | `/api/rooms/:id` | Update Room |
+| DELETE | `/api/rooms/:id` | Delete Room |
+| GET | `/api/bookings` | Get Bookings |
+| POST | `/api/bookings` | Create Booking |
+| PUT | `/api/bookings/:id` | Update Booking |
+| DELETE | `/api/bookings/:id` | Delete Booking |
+| GET | `/api/reports` | Booking Reports |
+| GET | `/api/reports/export` | Export Reports |
+
+การเข้าถึง Endpoint บางรายการต้องใช้ JWT Authentication ตามสิทธิ์ผู้ดูแลระบบ
+
+---
+
+## 💻 9. Local Development
+
+### Prerequisites
+
+โปรแกรมที่ต้องติดตั้ง
+
+- Git
+- Node.js
+- npm
+- Docker Desktop
+- Visual Studio Code
+
+### Step 1: Clone Repository
+
+`git clone https://github.com/SorrawichSomton/booking-app-demo-2025.git`
+
+`cd booking-app-demo-2025`
+
+### Step 2: Configure Database
+
+เตรียมไฟล์ `.env` สำหรับ PostgreSQL โดยใช้ค่า Environment Variables ที่เหมาะสมกับสภาพแวดล้อม Local
+
+ตัวแปร Backend ที่จำเป็น:
+
+- `DATABASE_URL` — PostgreSQL Connection String
+- `JWT_SECRET` — Secret สำหรับ JWT Authentication
+- `NODE_ENV` — Runtime Environment
+- `PORT` — Backend Port
+
+ไม่ควร Commit ไฟล์ `.env` หรือข้อมูล Credentials ขึ้น GitHub
+
+### Step 3: Start Backend
+
+เริ่ม PostgreSQL ผ่าน Docker Compose ภายในโฟลเดอร์ Backend
+
+`cd backend`
+
+`docker compose up -d db`
+
+ติดตั้ง Dependencies และเตรียม Prisma
+
+`npm ci`
+
+`npx prisma generate`
+
+`npx prisma migrate deploy`
+
+เริ่ม Backend
+
+`npm run dev`
+
+Backend ใช้งานผ่าน `http://localhost:3001` เมื่อกำหนด Port เป็น 3001
+
+### Step 4: Start Frontend
+
+เปิด Terminal ใหม่ที่ Root ของโปรเจกต์
+
+`cd frontend`
+
+`npm ci`
+
+`npm run dev`
+
+Frontend เปิดผ่าน `http://localhost:5173` ตามการตั้งค่า Vite ในการทดลอง
+
+กำหนด `VITE_API_URL` ให้ชี้ไปยัง Backend ที่ใช้งาน
+
+---
+
+## 🧪 10. API Testing with Newman
+
+โปรเจกต์ใช้ Postman Collection และ Newman สำหรับทดสอบ REST API
+
+### Test Scenarios
+
+1. Login with valid credentials
+2. Login with invalid password
+3. Get all rooms
+4. Create room as administrator
+5. Create public booking
+6. Get all bookings
+7. Get booking reports
+8. Verify unauthorized report export
+
+### Test Command
+
+`newman run tests/booking-api.postman_collection.json --env-var "baseUrl=http://localhost:3001"`
+
+### Local Test Results
+
+| Test Metric | Result |
+|---|---:|
+| Iterations | 1 |
+| Total Requests | 8 |
+| Assertions | 13 |
+| Failed Assertions | 0 |
+| Failed Requests | 0 |
+| Skipped Tests | 0 |
+
+**Result: All 13 assertions passed.**
+
+การทดสอบครอบคลุม Authentication, Room Management, Booking และ Reports ตาม Test Collection
+
+---
+
+## ⚙️ 11. CI/CD Pipeline
+
+โปรเจกต์ใช้ GitHub Actions ในการตรวจสอบคุณภาพและการทำงานของระบบ
+
+**Workflow:** `.github/workflows/ci-cd.yml`
+
+### Pipeline Jobs
+
+**Job 1: Backend Tests (Newman API)**
+
+- Setup Node.js
+- Install Backend Dependencies
+- Start PostgreSQL Test Database
+- Run Prisma Migrations
+- Seed Test Data
+- Run Newman API Tests
+
+**Job 2: Frontend Build**
+
+- Install Dependencies
+- Build React Application
+- Generate Production Build
+
+**Job 3: Security Scan**
+
+- ตรวจสอบ Dependency Vulnerabilities ด้วย npm audit
+
+### CI Results
+
+- ✅ Backend Tests: Success
+- ✅ Frontend Build: Success
+- ✅ Security Scan: Success
+
+Production deployment ไปยัง Vercel และ Render ถูกตั้งค่าแยกจากกระบวนการทดสอบ และมีเงื่อนไขสำหรับการเปิดใช้งาน Deployment Jobs
+
+### GitHub Actions
+
+[View CI/CD Workflow](https://github.com/SorrawichSomton/booking-app-demo-2025/actions)
+
+---
+
+## ☁️ 12. Cloud Deployment
+
+### Frontend — Vercel
+
+**Configuration**
+
+- Framework: Vite
+- Root Directory: `frontend`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Install Command: `npm ci`
+
+Environment Variable:
+
+`VITE_API_URL=https://booking-app-demo-2025-a8jr.onrender.com`
+
+### Backend — Render
+
+**Configuration**
+
+- Runtime: Docker
+- Root Directory: `backend`
+- Port: `3001`
+- Database: Render PostgreSQL
+- Deployment Branch: `main`
+
+Backend Environment Variables:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `NODE_ENV`
+- `PORT`
+
+Prisma Migrations ทำงานระหว่างกระบวนการเริ่มต้น Backend
+
+---
+
+## ✅ 13. Deployment Verification
+
+ผลการตรวจสอบที่ดำเนินการแล้ว
+
+- GitHub Repository สามารถ Push โค้ดได้สำเร็จ
+- GitHub Actions CI Pipeline ผ่าน
+- Newman API Tests ผ่าน 13 Assertions
+- Vercel Production Deployment สำเร็จ
+- Render Backend Deployment สำเร็จ
+- Backend เชื่อมต่อ PostgreSQL ได้
+- API `/api/rooms` ตอบกลับข้อมูลประเภทห้องพัก
+- Frontend สามารถเปิดหน้าแรกผ่าน Production URL ได้
+
+**Additional Verification**
+
+ควรทดสอบการสร้างรายการจองผ่าน Production Frontend การแสดงรายการจองใน Admin Dashboard และการส่งออกรายงานบนระบบออนไลน์เพื่อยืนยันการทำงานแบบ End-to-End
+
+---
+
+## 🔐 14. Security Considerations
+
+- ใช้ JWT สำหรับ Authentication
+- ใช้ bcryptjs สำหรับจัดการ Password Hash
+- จัดเก็บ Credentials ใน Environment Variables
+- ไม่เผยแพร่ Database Password หรือ JWT Secret
+- ใช้ Git Ignore เพื่อป้องกันการ Commit ไฟล์ข้อมูลลับ
+- ใช้ Dependency Security Scanning
+- ควรเปลี่ยน Default Admin Credentials ก่อนเปิดใช้งานจริง
+
+---
+
+## 🚀 15. Future Improvements
+
+แนวทางพัฒนาระบบเพิ่มเติม
+
+- เพิ่มระบบตรวจสอบห้องว่างแบบ Real-Time
+- เพิ่มการชำระเงินออนไลน์
+- เพิ่มการยืนยันการจองผ่านอีเมล
+- เพิ่มระบบจัดการลูกค้า
+- เพิ่ม Dashboard วิเคราะห์รายได้
+- เพิ่ม Automated End-to-End Testing
+- ปรับปรุงระบบ Monitoring และ Alerting
+
+---
+
+## 📌 16. Project Summary
+
+Booking App Demo 2025 เป็นตัวอย่างการพัฒนา Full-Stack Hotel Booking Management System ที่เชื่อมต่อ React Frontend, Node.js Backend และ PostgreSQL Database
+
+โครงการได้ดำเนินการติดตั้งระบบทดสอบอัตโนมัติผ่าน Newman และ GitHub Actions รวมถึง Deploy Frontend บน Vercel และ Backend พร้อมฐานข้อมูลบน Render
+
+ระบบสามารถเข้าถึงผ่าน Production URLs และใช้เป็นตัวอย่างการพัฒนา Web Application ที่มีการเชื่อมต่อฐานข้อมูล การทดสอบ API และ CI/CD Pipeline
+
+---
+
+**Project:** Booking App Demo 2025  
+**Repository:** SorrawichSomton/booking-app-demo-2025  
+**Frontend Hosting:** Vercel  
+**Backend Hosting:** Render  
+**Database:** PostgreSQL  
+**Version Control:** GitHub

@@ -43,5 +43,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node healthcheck.js || exit 1
 
 # Start the application with entrypoint script
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "./docker-entrypoint.sh"]
 #CMD ["npm", "start"]

@@ -1,15 +1,16 @@
+
 #!/bin/sh
 set -e
 
-echo "Waiting for database to be ready..."
-while ! nc -z db 5432; do
-  echo "Database is unavailable - sleeping"
-  sleep 1
-done
+echo "Starting Booking App Backend..."
 
-echo "Database is ready!"
-echo "Attempting to run Prisma migrations..."
-#npx prisma db push --accept-data-loss
-npx prisma migrate deploy
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL is not configured"
+  exit 1
+fi
+
+echo "Running Prisma migrations..."
+npx prisma migrate deploy --schema=prisma/schema.prisma
+
 echo "Starting application..."
 exec npm start

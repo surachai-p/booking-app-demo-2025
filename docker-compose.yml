@@ -1,0 +1,55 @@
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: booking_app
+    volumes:
+      - booking_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d booking_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/booking_app
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+    ports:
+      - "5000:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - booking-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - booking-net
+
+networks:
+  booking-net:
+    driver: bridge
+
+volumes:
+  booking_db_data:
