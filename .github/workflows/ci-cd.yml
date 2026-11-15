@@ -67,7 +67,6 @@ jobs:
           NODE_ENV: test
         run: |
           cd backend
-          # รัน seed script ถ้ามี (สร้าง admin user สำหรับ test)
           node -e "
             const { PrismaClient } = require('@prisma/client');
             const bcrypt = require('bcryptjs');
@@ -96,7 +95,6 @@ jobs:
         run: |
           cd backend
           npm start &
-          # รอให้ server พร้อม
           sleep 5
           curl -f http://localhost:3001/api/rooms || (echo "Server not ready" && exit 1)
 
@@ -155,7 +153,6 @@ jobs:
 
   # ─────────────────────────────────────────────
   # Job 3: Deploy Frontend to Vercel
-  # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
   # ─────────────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend → Vercel
@@ -181,7 +178,6 @@ jobs:
 
   # ─────────────────────────────────────────────
   # Job 4: Deploy Backend to Render
-  # (เฉพาะเมื่อ push ไปที่ main เท่านั้น)
   # ─────────────────────────────────────────────
   deploy-backend-render:
     name: Deploy Backend → Render
@@ -213,5 +209,3 @@ jobs:
           done
           echo "❌ Render health check failed after ${TIMEOUT}s"
           exit 1
-
-
